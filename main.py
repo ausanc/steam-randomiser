@@ -28,6 +28,14 @@ def get_owned_games(url_tokens):
     return steam_api_call_json(template, url_tokens)
 
 
+# accept multiple forms of user id input and return the 17 character form
+def parse_id_input(id_input, api_key):
+    if re.match('^[0-9]{17}', id_input):  # if input matches correct form
+        return id_input
+    else:  # assume it is a vanity ID
+        return get_id_from_vanity({"key": api_key, "vanity": id_input})
+
+
 def main():
     # command line arg handling
     parser = argparse.ArgumentParser(description='Pick a random game from a user\'s Steam library.')
@@ -41,12 +49,11 @@ def main():
     with open("steam-api-key.txt", "r") as f:
         key = f.read()
 
-    # if user_id is not in correct format, try getting the id from a vanity url
-    if not re.match('^[0-9]{17}', args.user_id):
-        args.user_id = get_id_from_vanity({"key": key, "vanity": args.user_id})
+    # convert user_id input into steam id 64 format
+    steam_id_64 = parse_id_input(args.user_id, key)
 
     # get games list, get list of unplayed games, pick one randomly and print
-    owned_games_json = get_owned_games({"key": key, "id": args.user_id})
+    owned_games_json = get_owned_games({"key": key, "id": steam_id_64})
     owned_games = owned_games_json["response"]["games"]
     if args.all_games:
         selectable_games = [game["name"] for game in owned_games]
