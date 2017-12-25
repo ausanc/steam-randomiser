@@ -51,7 +51,7 @@ def main():
     if args.all_games:
         selectable_games = [game["name"] for game in owned_games]
     else:
-        selectable_games = [game["name"] for game in owned_games if game["playtime_forever"] == 0]
+        selectable_games = [game["name"] for game in owned_games if game["playtime_forever"] <= args.time_played]
     print(random.choice(selectable_games))
 
 
