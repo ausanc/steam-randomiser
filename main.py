@@ -33,6 +33,8 @@ def main():
     parser = argparse.ArgumentParser(description='Pick a random game from a user\'s Steam library.')
     parser.add_argument('user_id', help='the ID of the Steam account')
     parser.add_argument('-a', '--all_games', help='pick from all games, not just unplayed ones', action='store_true')
+    parser.add_argument('-t', '--time_played', type=int, default=0,
+        help='the time in minutes a game needs to have been played to count as played')
     args = parser.parse_args()
 
     # read key in from file
@@ -51,6 +53,7 @@ def main():
     else:
         selectable_games = [game["name"] for game in owned_games if game["playtime_forever"] == 0]
     print(random.choice(selectable_games))
+
 
 if __name__ == "__main__":
     main()
