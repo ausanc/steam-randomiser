@@ -32,6 +32,7 @@ def main():
     # command line arg handling
     parser = argparse.ArgumentParser(description='Pick a random game from a user\'s Steam library.')
     parser.add_argument('user_id', help='the ID of the Steam account')
+    parser.add_argument('-a', '--all_games', help='pick from all games, not just unplayed ones', action='store_true')
     args = parser.parse_args()
 
     # read key in from file
@@ -45,8 +46,11 @@ def main():
     # get games list, get list of unplayed games, pick one randomly and print
     owned_games_json = get_owned_games({"key": key, "id": args.user_id})
     owned_games = owned_games_json["response"]["games"]
-    unplayed_games = [game["name"] for game in owned_games if game["playtime_forever"] == 0]
-    print(random.choice(unplayed_games))
+    if args.all_games:
+        selectable_games = [game["name"] for game in owned_games]
+    else:
+        selectable_games = [game["name"] for game in owned_games if game["playtime_forever"] == 0]
+    print(random.choice(selectable_games))
 
 if __name__ == "__main__":
     main()
