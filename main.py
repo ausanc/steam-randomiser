@@ -30,8 +30,13 @@ def get_owned_games(url_tokens):
 
 # accept multiple forms of user id input and return the 17 character form
 def parse_id_input(id_input, api_key):
-    if re.match('^[0-9]{17}', id_input):  # if input matches correct form
+    if re.match(r'^[0-9]{17}$', id_input):  # if input matches correct form
         return id_input
+    elif re.search(r'profiles/([0-9]{17})$', id_input):  # if using url with steamid64
+        return re.search(r'profiles/([0-9]{17})$', id_input).group(1)
+    elif re.search(r'id/(.*)$', id_input):  # if using url with vanity id
+        vanity = re.search(r'id/(.*)$', id_input).group(1)
+        return get_id_from_vanity({"key": api_key, "vanity": vanity})
     else:  # assume it is a vanity ID
         return get_id_from_vanity({"key": api_key, "vanity": id_input})
 
