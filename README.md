@@ -8,3 +8,5 @@ The program expects a file `steam-api-key.txt` containing just the API key.
 User ID: program takes a 17 digit steam ID, or a vanity URL ID.
 
 Example: `python main.py 76561198033703131` or `python main.py aviatorwest` will both work.
+
+-a, --all_games: Select from all games in the user's library, not just unplayed ones.
