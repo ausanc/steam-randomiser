@@ -25,7 +25,7 @@ def get_id_from_vanity(url_tokens):
 # get the list of owned games for a user
 def get_owned_games(url_tokens):
     template = "http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={key}&steamid={id}&include_appinfo=1"
-    return steam_api_call_json(template, url_tokens)
+    return steam_api_call_json(template, url_tokens)["response"]["games"]
 
 
 # accept multiple forms of user id input and return the 17 character form
@@ -41,6 +41,21 @@ def parse_id_input(id_input, api_key):
         return get_id_from_vanity({"key": api_key, "vanity": id_input})
 
 
+# picks a random game from a user's library
+def pick_random_game(user_id, api_key, all_games=False, time_played=0):
+    # convert user_id input into steam id 64 format
+    steam_id_64 = parse_id_input(user_id, api_key)
+
+    # get games list, get list of unplayed games, pick one randomly and print
+    owned_games = get_owned_games({"key": api_key, "id": steam_id_64})
+    if all_games:
+        selectable_games = owned_games
+    else:
+        selectable_games = [game for game in owned_games if game["playtime_forever"] <= time_played]
+
+    return random.choice(selectable_games)
+
+
 def main():
     # command line arg handling
     parser = argparse.ArgumentParser(description='Pick a random game from a user\'s Steam library.')
@@ -54,17 +69,9 @@ def main():
     with open("steam-api-key.txt", "r") as f:
         key = f.read()
 
-    # convert user_id input into steam id 64 format
-    steam_id_64 = parse_id_input(args.user_id, key)
-
-    # get games list, get list of unplayed games, pick one randomly and print
-    owned_games_json = get_owned_games({"key": key, "id": steam_id_64})
-    owned_games = owned_games_json["response"]["games"]
-    if args.all_games:
-        selectable_games = [game["name"] for game in owned_games]
-    else:
-        selectable_games = [game["name"] for game in owned_games if game["playtime_forever"] <= args.time_played]
-    print(random.choice(selectable_games))
+    # get a random game from the user's library
+    game = pick_random_game(args.user_id, key, all_games=args.all_games, time_played=args.time_played)
+    print(game["name"])
 
 
 if __name__ == "__main__":
