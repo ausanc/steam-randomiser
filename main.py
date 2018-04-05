@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 import random
 import re
@@ -67,7 +69,7 @@ def main():
 
     # read key in from file
     with open("steam-api-key.txt", "r") as f:
-        key = f.read()
+        key = f.read().strip()
 
     # get a random game from the user's library
     game = pick_random_game(args.user_id, key, all_games=args.all_games, time_played=args.time_played)
