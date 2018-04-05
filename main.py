@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-
 import argparse
 import random
 import re
 import requests
 
 
-# make a steam api call and return the json result
 def steam_api_call_json(template, url_tokens):
+    """Make a steam api call and return the json result, or throw a ValueError exception."""
     url = template.format(**url_tokens)
     r = requests.get(url)
     if r.status_code != 200:
@@ -15,8 +14,8 @@ def steam_api_call_json(template, url_tokens):
     return r.json()
 
 
-# tries to get a user_id from a provided vanity url name
 def get_id_from_vanity(url_tokens):
+    """Get a user_id from a provided vanity url name, or throw a ValueError exception."""
     template = "http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key={key}&vanityurl={vanity}"
     json = steam_api_call_json(template, url_tokens)
     if json["response"]["success"] != 1:
@@ -24,14 +23,15 @@ def get_id_from_vanity(url_tokens):
     return json["response"]["steamid"]
 
 
-# get the list of owned games for a user
 def get_owned_games(url_tokens):
-    template = "http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={key}&steamid={id}&include_appinfo=1"
+    """Get the list of owned games for a user."""
+    template = \
+        "http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={key}&steamid={id}&include_appinfo=1"
     return steam_api_call_json(template, url_tokens)["response"]["games"]
 
 
-# accept multiple forms of user id input and return the 17 character form
 def parse_id_input(id_input, api_key):
+    """Accept multiple forms of user id input and return the 17 character form."""
     if re.match(r'^[0-9]{17}$', id_input):  # if input matches correct form
         return id_input
     elif re.search(r'profiles/([0-9]{17})$', id_input):  # if using url with steamid64
@@ -43,8 +43,8 @@ def parse_id_input(id_input, api_key):
         return get_id_from_vanity({"key": api_key, "vanity": id_input})
 
 
-# picks a random game from a user's library
 def pick_random_game(user_id, api_key, all_games=False, time_played=0):
+    """Pick a random game from a user's library."""
     # convert user_id input into steam id 64 format
     steam_id_64 = parse_id_input(user_id, api_key)
 
@@ -63,8 +63,10 @@ def main():
     parser = argparse.ArgumentParser(description='Pick a random game from a user\'s Steam library.')
     parser.add_argument('user_id', help='the ID of the Steam account')
     parser.add_argument('-a', '--all_games', help='pick from all games, not just unplayed ones', action='store_true')
-    parser.add_argument('-t', '--time_played', type=int, default=0,
-        help='the time in minutes a game needs to have been played to count as played')
+    parser.add_argument(
+        '-t', '--time_played', type=int, default=0,
+        help='the time in minutes a game needs to have been played to count as played'
+    )
     args = parser.parse_args()
 
     # read key in from file
