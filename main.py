@@ -14,20 +14,20 @@ def steam_api_call_json(template, url_tokens):
     return r.json()
 
 
-def get_id_from_vanity(url_tokens):
+def get_id_from_vanity(key, vanity):
     """Get a user_id from a provided vanity url name, or throw a ValueError exception."""
     template = "http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key={key}&vanityurl={vanity}"
-    json = steam_api_call_json(template, url_tokens)
+    json = steam_api_call_json(template, {"key": key, "vanity": vanity})
     if json["response"]["success"] != 1:
         raise ValueError("Failed to get Steam ID from vanity name.")
     return json["response"]["steamid"]
 
 
-def get_owned_games(url_tokens):
+def get_owned_games(key, steam_id):
     """Get the list of owned games for a user."""
     template = \
         "http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={key}&steamid={id}&include_appinfo=1"
-    return steam_api_call_json(template, url_tokens)["response"]["games"]
+    return steam_api_call_json(template, {"key": key, "id": steam_id})["response"]["games"]
 
 
 def parse_id_input(id_input, api_key):
@@ -38,18 +38,18 @@ def parse_id_input(id_input, api_key):
         return re.search(r'profiles/([0-9]{17})$', id_input).group(1)
     elif re.search(r'id/(.*)$', id_input):  # if using url with vanity id
         vanity = re.search(r'id/(.*)$', id_input).group(1)
-        return get_id_from_vanity({"key": api_key, "vanity": vanity})
+        return get_id_from_vanity(api_key, vanity)
     else:  # assume it is a vanity ID
-        return get_id_from_vanity({"key": api_key, "vanity": id_input})
+        return get_id_from_vanity(api_key, id_input)
 
 
-def pick_random_game(user_id, api_key, all_games=False, time_played=0):
+def pick_random_game(key, user_id, all_games=False, time_played=0):
     """Pick a random game from a user's library."""
     # convert user_id input into steam id 64 format
-    steam_id_64 = parse_id_input(user_id, api_key)
+    steam_id = parse_id_input(user_id, key)
 
     # get games list, get list of unplayed games, pick one randomly and print
-    owned_games = get_owned_games({"key": api_key, "id": steam_id_64})
+    owned_games = get_owned_games(key, steam_id)
     if all_games:
         selectable_games = owned_games
     else:
@@ -74,7 +74,7 @@ def main():
         key = f.read().strip()
 
     # get a random game from the user's library
-    game = pick_random_game(args.user_id, key, all_games=args.all_games, time_played=args.time_played)
+    game = pick_random_game(key, args.user_id, all_games=args.all_games, time_played=args.time_played)
     print(game["name"])
 
 
