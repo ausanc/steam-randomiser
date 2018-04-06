@@ -3,6 +3,7 @@ import argparse
 import random
 import re
 import requests
+import sys
 
 
 def steam_api_call_json(template, url_tokens):
@@ -58,6 +59,20 @@ def pick_random_game(key, user_id, all_games=False, time_played=0):
     return random.choice(selectable_games)
 
 
+def get_achievement_stats_for_game(game_id):
+    template = "http://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/?gameid={game_id}"
+    json = steam_api_call_json(template, {"game_id": game_id})
+    for achievement in json["achievementpercentages"]["achievements"]:
+        print(achievement["name"] + ": " + ("%.1f" % achievement["percent"]) + "%")
+    return json["achievementpercentages"]["achievements"]
+
+
+def get_schema_info_for_game(key, app_id):
+    template = "http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={key}&appid={app_id}"
+    json = steam_api_call_json(template, {"key": key, "app_id": app_id})
+    return json
+
+
 def main():
     # command line arg handling
     parser = argparse.ArgumentParser(description='Pick a random game from a user\'s Steam library.')
@@ -75,7 +90,15 @@ def main():
 
     # get a random game from the user's library
     game = pick_random_game(key, args.user_id, all_games=args.all_games, time_played=args.time_played)
+    print("App ID: %s" % game["appid"])
     print(game["name"])
+
+    achievements = get_achievement_stats_for_game(game["appid"])
+    if len(achievements) == 0:
+        print("No achievements.")
+    else:
+        for cheevo in get_schema_info_for_game(key, game["appid"])["game"]["availableGameStats"]["achievements"]:
+            print(cheevo["displayName"].encode("ascii", errors='replace').decode("ascii"))
 
 
 if __name__ == "__main__":
