@@ -99,3 +99,4 @@ ENV/
 
 # mypy
 .mypy_cache/
+steam-api-key.txt
