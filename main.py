@@ -67,10 +67,10 @@ def get_achievement_stats_for_game(game_id):
     return json["achievementpercentages"]["achievements"]
 
 
-def get_schema_info_for_game(key, app_id):
+def get_schema_achievements_for_game(key, app_id):
     template = "http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={key}&appid={app_id}"
     json = steam_api_call_json(template, {"key": key, "app_id": app_id})
-    return json
+    return json["game"]["availableGameStats"]["achievements"]
 
 
 def main():
@@ -97,8 +97,19 @@ def main():
     if len(achievements) == 0:
         print("No achievements.")
     else:
-        for cheevo in get_schema_info_for_game(key, game["appid"])["game"]["availableGameStats"]["achievements"]:
+        schema_achievements = get_schema_achievements_for_game(key, game["appid"])
+        modifier = 100.0 / achievements[0]["percent"]
+        cutoff = 80
+        candidates = [achievement for achievement in achievements if achievement["percent"] * modifier >= cutoff]
+        for cheevo in schema_achievements:
             print(cheevo["displayName"].encode("ascii", errors='replace').decode("ascii"))
+        if len(candidates) > 0:
+            random_cheevo_name = random.choice(candidates)["name"]
+            found_display_name = ""
+            for item in schema_achievements:
+                if item["name"] == random_cheevo_name:
+                    found_display_name = item["displayName"]
+            print("Challenge achievement: %s" % found_display_name)
 
 
 if __name__ == "__main__":
