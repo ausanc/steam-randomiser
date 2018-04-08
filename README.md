@@ -14,3 +14,5 @@ Example: `python main.py https://steamcommunity.com/profiles/76561198033703131`,
 `-t`, `--time_played`: Change the threshold of how many minutes a game has to have been played for it to be excluded from the random selection. Use if you don't count a few minutes of playtime as really being played.
 
 Example: `python main.py ausanc -t 10` will pick from all games with 10 minutes of playtime or less.
+
+`-c`, `--achievement`: Select a random achievement from the picked game as an objective to complete.

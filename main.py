@@ -60,8 +60,6 @@ def pick_random_game(key, user_id, all_games=False, time_played=0):
 def get_achievement_stats_for_game(game_id):
     template = "ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/?gameid={game_id}"
     json = steam_api_call_json(template, {"game_id": game_id})
-    for achievement in json["achievementpercentages"]["achievements"]:
-        print(achievement["name"] + ": " + ("%.1f" % achievement["percent"]) + "%")
     return json["achievementpercentages"]["achievements"]
 
 
@@ -71,25 +69,32 @@ def get_schema_for_game(key, app_id):
     return json
 
 
-def get_random_achievement(key, appid):
+def get_random_achievement(key, appid, cutoff=80):
     achievements = get_achievement_stats_for_game(appid)
     if len(achievements) == 0:
-        print("No achievements.")
-    else:
-        schema = get_schema_for_game(key, appid)
-        schema_achievements = schema["game"]["availableGameStats"]["achievements"]
-        modifier = 100.0 / achievements[0]["percent"]
-        cutoff = 80
-        candidates = [achievement for achievement in achievements if achievement["percent"] * modifier >= cutoff]
-        for cheevo in schema_achievements:
-            print(cheevo["displayName"].encode("ascii", errors='replace').decode("ascii"))
-        if len(candidates) > 0:
-            random_cheevo_name = random.choice(candidates)["name"]
-            found_display_name = ""
-            for item in schema_achievements:
-                if item["name"] == random_cheevo_name:
-                    found_display_name = item["displayName"]
-            return found_display_name
+        print("No achievements for this game")
+        return None
+
+    schema = get_schema_for_game(key, appid)
+    schema_achievements = schema["game"]["availableGameStats"]["achievements"]
+    modifier = 100.0 / achievements[0]["percent"]
+    candidates = [achievement for achievement in achievements if achievement["percent"] * modifier >= cutoff]
+    for item in schema_achievements:
+        for stat in achievements:
+            if item["name"] == stat["name"]:
+                item["percent"] = stat["percent"]
+                break
+
+    sorted_by_unlocked = reversed(sorted(schema_achievements, key=lambda tup: tup["percent"]))
+    for achievement in sorted_by_unlocked:
+        print("%s: %.1f%%" % (achievement["displayName"].encode("ascii", errors='replace').decode("ascii"), achievement["percent"]))
+
+    random_cheevo_name = random.choice(candidates)["name"]
+    found_display_name = ""
+    for item in schema_achievements:
+        if item["name"] == random_cheevo_name:
+            found_display_name = item["displayName"]
+    return found_display_name
 
 
 def main():
