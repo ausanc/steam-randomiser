@@ -3,12 +3,11 @@ import argparse
 import random
 import re
 import requests
-import sys
 
 
 def steam_api_call_json(template, url_tokens):
     """Make a steam api call and return the json result, or throw a ValueError exception."""
-    url = template.format(**url_tokens)
+    url = ("http://api.steampowered.com/" + template).format(**url_tokens)
     r = requests.get(url)
     if r.status_code != 200:
         raise ValueError("Status code of request is not 200.")
@@ -17,7 +16,7 @@ def steam_api_call_json(template, url_tokens):
 
 def get_id_from_vanity(key, vanity):
     """Get a user_id from a provided vanity url name, or throw a ValueError exception."""
-    template = "http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key={key}&vanityurl={vanity}"
+    template = "ISteamUser/ResolveVanityURL/v0001/?key={key}&vanityurl={vanity}"
     json = steam_api_call_json(template, {"key": key, "vanity": vanity})
     if json["response"]["success"] != 1:
         raise ValueError("Failed to get Steam ID from vanity name.")
@@ -26,8 +25,7 @@ def get_id_from_vanity(key, vanity):
 
 def get_owned_games(key, steam_id):
     """Get the list of owned games for a user."""
-    template = \
-        "http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={key}&steamid={id}&include_appinfo=1"
+    template = "IPlayerService/GetOwnedGames/v0001/?key={key}&steamid={id}&include_appinfo=1"
     return steam_api_call_json(template, {"key": key, "id": steam_id})["response"]["games"]
 
 
@@ -60,44 +58,26 @@ def pick_random_game(key, user_id, all_games=False, time_played=0):
 
 
 def get_achievement_stats_for_game(game_id):
-    template = "http://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/?gameid={game_id}"
+    template = "ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/?gameid={game_id}"
     json = steam_api_call_json(template, {"game_id": game_id})
     for achievement in json["achievementpercentages"]["achievements"]:
         print(achievement["name"] + ": " + ("%.1f" % achievement["percent"]) + "%")
     return json["achievementpercentages"]["achievements"]
 
 
-def get_schema_achievements_for_game(key, app_id):
-    template = "http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={key}&appid={app_id}"
+def get_schema_for_game(key, app_id):
+    template = "ISteamUserStats/GetSchemaForGame/v2/?key={key}&appid={app_id}"
     json = steam_api_call_json(template, {"key": key, "app_id": app_id})
-    return json["game"]["availableGameStats"]["achievements"]
+    return json
 
 
-def main():
-    # command line arg handling
-    parser = argparse.ArgumentParser(description='Pick a random game from a user\'s Steam library.')
-    parser.add_argument('user_id', help='the ID of the Steam account')
-    parser.add_argument('-a', '--all_games', help='pick from all games, not just unplayed ones', action='store_true')
-    parser.add_argument(
-        '-t', '--time_played', type=int, default=0,
-        help='the time in minutes a game needs to have been played to count as played'
-    )
-    args = parser.parse_args()
-
-    # read key in from file
-    with open("steam-api-key.txt", "r") as f:
-        key = f.read().strip()
-
-    # get a random game from the user's library
-    game = pick_random_game(key, args.user_id, all_games=args.all_games, time_played=args.time_played)
-    print("App ID: %s" % game["appid"])
-    print(game["name"])
-
-    achievements = get_achievement_stats_for_game(game["appid"])
+def get_random_achievement(key, appid):
+    achievements = get_achievement_stats_for_game(appid)
     if len(achievements) == 0:
         print("No achievements.")
     else:
-        schema_achievements = get_schema_achievements_for_game(key, game["appid"])
+        schema = get_schema_for_game(key, appid)
+        schema_achievements = schema["game"]["availableGameStats"]["achievements"]
         modifier = 100.0 / achievements[0]["percent"]
         cutoff = 80
         candidates = [achievement for achievement in achievements if achievement["percent"] * modifier >= cutoff]
@@ -109,7 +89,31 @@ def main():
             for item in schema_achievements:
                 if item["name"] == random_cheevo_name:
                     found_display_name = item["displayName"]
-            print("Challenge achievement: %s" % found_display_name)
+            return found_display_name
+
+
+def main():
+    # command line arg handling
+    parser = argparse.ArgumentParser(description='Pick a random game from a user\'s Steam library.')
+    parser.add_argument('user_id', help='the ID of the Steam account')
+    parser.add_argument('-a', '--all_games', help='pick from all games, not just unplayed ones', action='store_true')
+    parser.add_argument(
+        '-t', '--time_played', type=int, default=0,
+        help='the time in minutes a game needs to have been played to count as played'
+    )
+    parser.add_argument('-c', '--achievement', help='pick a random achievement as an objective', action='store_true')
+    args = parser.parse_args()
+
+    # read key in from file
+    with open("steam-api-key.txt", "r") as f:
+        key = f.read().strip()
+
+    # get a random game from the user's library
+    game = pick_random_game(key, args.user_id, all_games=args.all_games, time_played=args.time_played)
+    print("App ID: %s" % game["appid"])
+    print(game["name"])
+    if args.achievement:
+        print("Challenge achievement: %s" % get_random_achievement(key, game["appid"]))
 
 
 if __name__ == "__main__":
