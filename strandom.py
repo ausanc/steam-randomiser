@@ -2,31 +2,7 @@
 import argparse
 import random
 import re
-import requests
-
-
-def steam_api_call_json(template, url_tokens):
-    """Make a steam api call and return the json result, or throw a ValueError exception."""
-    url = ("http://api.steampowered.com/" + template).format(**url_tokens)
-    r = requests.get(url)
-    if r.status_code != 200:
-        raise ValueError("Status code of request is not 200.")
-    return r.json()
-
-
-def get_id_from_vanity(key, vanity):
-    """Get a user_id from a provided vanity url name, or throw a ValueError exception."""
-    template = "ISteamUser/ResolveVanityURL/v0001/?key={key}&vanityurl={vanity}"
-    json = steam_api_call_json(template, {"key": key, "vanity": vanity})
-    if json["response"]["success"] != 1:
-        raise ValueError("Failed to get Steam ID from vanity name.")
-    return json["response"]["steamid"]
-
-
-def get_owned_games(key, steam_id):
-    """Get the list of owned games for a user."""
-    template = "IPlayerService/GetOwnedGames/v0001/?key={key}&steamid={id}&include_appinfo=1"
-    return steam_api_call_json(template, {"key": key, "id": steam_id})["response"]["games"]
+import steamapi
 
 
 def parse_id_input(id_input, api_key):
@@ -37,9 +13,9 @@ def parse_id_input(id_input, api_key):
         return re.search(r'profiles/([0-9]{17})$', id_input).group(1)
     elif re.search(r'id/(.*)$', id_input):  # if using url with vanity id
         vanity = re.search(r'id/(.*)$', id_input).group(1)
-        return get_id_from_vanity(api_key, vanity)
+        return steamapi.resolve_vanity_url(api_key, vanity)
     else:  # assume it is a vanity ID
-        return get_id_from_vanity(api_key, id_input)
+        return steamapi.resolve_vanity_url(api_key, id_input)
 
 
 def pick_random_game(key, user_id, all_games=False, time_played=0):
@@ -48,7 +24,7 @@ def pick_random_game(key, user_id, all_games=False, time_played=0):
     steam_id = parse_id_input(user_id, key)
 
     # get games list, get list of unplayed games, pick one randomly and print
-    owned_games = get_owned_games(key, steam_id)
+    owned_games = steamapi.get_owned_games(key, steam_id)
     if all_games:
         selectable_games = owned_games
     else:
@@ -57,25 +33,13 @@ def pick_random_game(key, user_id, all_games=False, time_played=0):
     return random.choice(selectable_games)
 
 
-def get_achievement_stats_for_game(game_id):
-    template = "ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/?gameid={game_id}"
-    json = steam_api_call_json(template, {"game_id": game_id})
-    return json["achievementpercentages"]["achievements"]
-
-
-def get_schema_for_game(key, app_id):
-    template = "ISteamUserStats/GetSchemaForGame/v2/?key={key}&appid={app_id}"
-    json = steam_api_call_json(template, {"key": key, "app_id": app_id})
-    return json
-
-
 def get_random_achievement(key, appid, cutoff=80):
-    achievements = get_achievement_stats_for_game(appid)
+    achievements = steamapi.get_global_achievement_percentages_for_app(appid)
     if len(achievements) == 0:
         print("No achievements for this game")
         return None
 
-    schema = get_schema_for_game(key, appid)
+    schema = steamapi.get_schema_for_game(key, appid)
     schema_achievements = schema["game"]["availableGameStats"]["achievements"]
     modifier = 100.0 / achievements[0]["percent"]
     candidates = [achievement for achievement in achievements if achievement["percent"] * modifier >= cutoff]
