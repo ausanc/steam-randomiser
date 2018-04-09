@@ -33,7 +33,7 @@ def pick_random_game(key, user_id, all_games=False, time_played=0):
     return random.choice(selectable_games)
 
 
-def get_random_achievement(key, appid, cutoff=80):
+def pick_random_achievement(key, appid, cutoff=80):
     achievements = steamapi.get_global_achievement_percentages_for_app(appid)
     if len(achievements) == 0:
         print("No achievements for this game")
@@ -70,7 +70,10 @@ def main():
         '-t', '--time_played', type=int, default=0,
         help='the time in minutes a game needs to have been played to count as played'
     )
-    parser.add_argument('-c', '--achievement', help='pick a random achievement as an objective', action='store_true')
+    parser.add_argument('-v', '--achievement', help='pick a random achievement as an objective', action='store_true')
+    parser.add_argument(
+        '-c', '--cutoff', type=int, default=80, help='set the cutoff percentage for randomly picked achievements'
+    )
     args = parser.parse_args()
 
     # read key in from file
@@ -82,7 +85,7 @@ def main():
     print("App ID: %s" % game["appid"])
     print(game["name"])
     if args.achievement:
-        print("Challenge achievement: %s" % get_random_achievement(key, game["appid"]))
+        print("Challenge achievement: %s" % pick_random_achievement(key, game["appid"], cutoff=args.cutoff))
 
 
 if __name__ == "__main__":
