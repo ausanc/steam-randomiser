@@ -5,7 +5,11 @@ import re
 import steamapi
 
 
-def parse_id_input(id_input, api_key):
+def to_ascii(string):
+    return string.encode("ascii", errors='replace').decode("ascii")
+
+
+def parse_id_input(key, id_input):
     """Accept multiple forms of user id input and return the 17 character form."""
     if re.match(r'^[0-9]{17}$', id_input):  # if input matches correct form
         return id_input
@@ -13,15 +17,15 @@ def parse_id_input(id_input, api_key):
         return re.search(r'profiles/([0-9]{17})$', id_input).group(1)
     elif re.search(r'id/(.*)$', id_input):  # if using url with vanity id
         vanity = re.search(r'id/(.*)$', id_input).group(1)
-        return steamapi.resolve_vanity_url(api_key, vanity)
+        return steamapi.resolve_vanity_url(key, vanity)
     else:  # assume it is a vanity ID
-        return steamapi.resolve_vanity_url(api_key, id_input)
+        return steamapi.resolve_vanity_url(key, id_input)
 
 
 def pick_random_game(key, user_id, all_games=False, time_played=0):
     """Pick a random game from a user's library."""
     # convert user_id input into steam id 64 format
-    steam_id = parse_id_input(user_id, key)
+    steam_id = parse_id_input(key, user_id)
 
     # get games list, get list of unplayed games, pick one randomly and print
     owned_games = steamapi.get_owned_games(key, steam_id)
@@ -51,14 +55,12 @@ def pick_random_achievement(key, appid, cutoff=80):
 
     sorted_by_unlocked = reversed(sorted(schema_achievements, key=lambda tup: tup["percent"]))
     for achievement in sorted_by_unlocked:
-        print("%s: %.1f%%" % (achievement["displayName"].encode("ascii", errors='replace').decode("ascii"), achievement["percent"]))
+        print("%s: %.1f%%" % (to_ascii(achievement["displayName"]), achievement["percent"]))
 
     random_cheevo_name = random.choice(candidates)["name"]
-    found_display_name = ""
     for item in schema_achievements:
         if item["name"] == random_cheevo_name:
-            found_display_name = item["displayName"]
-    return found_display_name
+            return item
 
 
 def main():
@@ -85,7 +87,7 @@ def main():
     print("App ID: %s" % game["appid"])
     print(game["name"])
     if args.achievement:
-        print("Challenge achievement: %s" % pick_random_achievement(key, game["appid"], cutoff=args.cutoff))
+        print("Challenge achievement: %s" % pick_random_achievement(key, game["appid"], cutoff=args.cutoff)["displayName"])
 
 
 if __name__ == "__main__":
