@@ -24,6 +24,7 @@ def parse_id_input(key, id_input):
 
 def pick_random_game(key, user_id, all_games=False, time_played=0):
     """Pick a random game from a user's library."""
+    print("Picking random game for user %s." % user_id)
     # convert user_id input into steam id 64 format
     steam_id = parse_id_input(key, user_id)
 
@@ -38,13 +39,18 @@ def pick_random_game(key, user_id, all_games=False, time_played=0):
 
 
 def pick_random_achievement(key, appid, cutoff=80):
+    print("Picking random achievement for game %s." % appid)
     achievements = steamapi.get_global_achievement_percentages_for_app(appid)
     if len(achievements) == 0:
         print("No achievements for this game")
         return None
 
     schema = steamapi.get_schema_for_game(key, appid)
-    schema_achievements = schema["game"]["availableGameStats"]["achievements"]
+    if "achievement" in schema["game"]["availableGameStats"]:
+        schema_achievements = schema["game"]["availableGameStats"]["achievements"]
+    else:
+        print("No achievements for this game")
+        return None
     modifier = 100.0 / achievements[0]["percent"]
     candidates = [achievement for achievement in achievements if achievement["percent"] * modifier >= cutoff]
     for item in schema_achievements:
