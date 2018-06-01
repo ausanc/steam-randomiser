@@ -22,7 +22,10 @@ def resolve_vanity_url(key, vanity):
 def get_owned_games(key, steam_id):
     """Get the list of owned games for a user."""
     template = "IPlayerService/GetOwnedGames/v0001/?key={key}&steamid={id}&include_appinfo=1"
-    return api_call_json(template, {"key": key, "id": steam_id})["response"]["games"]
+    json = api_call_json(template, {"key": key, "id": steam_id})
+    if "games" not in json["response"]:
+        raise ValueError("Failed to get games list for SteamID %s" % steam_id)
+    return json["response"]["games"]
 
 
 def get_global_achievement_percentages_for_app(game_id):
