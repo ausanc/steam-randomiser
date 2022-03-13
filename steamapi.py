@@ -5,6 +5,7 @@ def api_call_json(template, url_tokens):
     """Make a steam api call and return the json result, or throw a ValueError exception."""
     url = ("http://api.steampowered.com/" + template).format(**url_tokens)
     r = requests.get(url)
+    
     if r.status_code != 200:
         raise ValueError("Status code of request is not 200.")
     return r.json()

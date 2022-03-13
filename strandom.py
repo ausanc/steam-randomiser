@@ -38,19 +38,22 @@ def pick_random_game(key, user_id, all_games=False, time_played=0):
     return random.choice(selectable_games)
 
 
-def pick_random_achievement(key, appid, cutoff=80):
+def pick_random_achievement(key, appid, cutoff=80, verbose=False):
     print("Picking random achievement for game %s." % appid)
-    achievements = steamapi.get_global_achievement_percentages_for_app(appid)
-    if len(achievements) == 0:
-        print("No achievements for this game")
-        return None
-
+    
     schema = steamapi.get_schema_for_game(key, appid)
-    if "achievement" in schema["game"]["availableGameStats"]:
+    if "availableGameStats" in schema["game"] and "achievements" in schema["game"]["availableGameStats"]:
         schema_achievements = schema["game"]["availableGameStats"]["achievements"]
     else:
         print("No achievements for this game")
         return None
+    
+    achievements = steamapi.get_global_achievement_percentages_for_app(appid)
+    if len(achievements) == 0:
+    	# This *probably* can't happen, but better safe than sorry.
+        print("No achievements for this game")
+        return None
+
     modifier = 100.0 / achievements[0]["percent"]
     candidates = [achievement for achievement in achievements if achievement["percent"] * modifier >= cutoff]
     for item in schema_achievements:
@@ -59,9 +62,10 @@ def pick_random_achievement(key, appid, cutoff=80):
                 item["percent"] = stat["percent"]
                 break
 
-    sorted_by_unlocked = reversed(sorted(schema_achievements, key=lambda tup: tup["percent"]))
-    for achievement in sorted_by_unlocked:
-        print("%s: %.1f%%" % (to_ascii(achievement["displayName"]), achievement["percent"]))
+    if verbose:
+        sorted_by_unlocked = reversed(sorted(schema_achievements, key=lambda tup: tup["percent"]))
+        for achievement in sorted_by_unlocked:
+        	print("%s: %.1f%%" % (to_ascii(achievement["displayName"]), achievement["percent"]))
 
     random_cheevo_name = random.choice(candidates)["name"]
     for item in schema_achievements:
@@ -82,6 +86,7 @@ def main():
     parser.add_argument(
         '-c', '--cutoff', type=int, default=80, help='set the cutoff percentage for randomly picked achievements'
     )
+    parser.add_argument('-V', '--verbose', help='print out extra information about what\'s gotten', action='store_true')
     args = parser.parse_args()
 
     # read key in from file
@@ -90,10 +95,13 @@ def main():
 
     # get a random game from the user's library
     game = pick_random_game(key, args.user_id, all_games=args.all_games, time_played=args.time_played)
-    print("App ID: %s" % game["appid"])
+    if args.verbose:
+    	print("App ID: %s" % game["appid"])
     print(game["name"])
     if args.achievement:
-        print("Challenge achievement: %s" % pick_random_achievement(key, game["appid"], cutoff=args.cutoff)["displayName"])
+    	achievement = pick_random_achievement(key, game["appid"], cutoff=args.cutoff, verbose=args.verbose)
+    	if not achievement is None:
+        	print("Challenge achievement: %s" % achievement["displayName"])
 
 
 if __name__ == "__main__":
